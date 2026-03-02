@@ -4,7 +4,7 @@
 
 A 2-hour hands-on workshop where you build an end-to-end AI-powered customer service analytics system entirely within Snowflake — processing audio, text, and PDF data using pure SQL.
 
-> **Note**: This repo is an enhanced version of the official [Snowflake Quickstart](https://www.snowflake.com/en/developers/guides/extracting-insights-from-multimodal-customer-service-data/). We've added detailed explanations, a Streamlit dashboard module, and extended the duration to 2 hours. The core Cortex AI content remains identical.
+> **Based on**: [Extracting Insights from Multimodal Customer Data](https://quickstarts.snowflake.com/guide/extracting-insights-from-multimodal-customer-data/) Snowflake Quickstart — extended with a Streamlit Dashboard module
 
 ## What You Will Build
 
@@ -22,30 +22,30 @@ A 2-hour hands-on workshop where you build an end-to-end AI-powered customer ser
                        SNOWFLAKE ACCOUNT
     ┌─────────────────────────────────────────────────────┐
     │                                                     │
-    │  ┌─────────────┐   Cortex AI    ┌──────────────┐   │
-    │  │ DATA        │ ────────────>  │ RESULTS      │   │
-    │  │ Sources     │  Transcribe    │ Tables       │   │
-    │  │             │  Translate     │              │   │
-    │  │ @CUSTOMER_  │  Sentiment     │ transcription│   │
-    │  │  CALLS      │  Classify      │ _results     │   │
-    │  │ @COMPANY_   │  Summarize     │              │   │
-    │  │  DOCUMENTS  │  Parse         │ chat_        │   │
-    │  │ CHAT_LOGS   │  Extract       │ validation_  │   │
-    │  │ SUPPORT_    │                │ results      │   │
-    │  │  TICKETS    │                │              │   │
-    │  └─────────────┘                │ ticket_chat_ │   │
-    │                                 │ alignment    │   │
-    │                                 └──────┬───────┘   │
-    │                                        │           │
-    │                          ┌─────────────▼────────┐  │
-    │                          │ STREAMLIT DASHBOARD  │  │
-    │                          │ • KPI Metrics        │  │
-    │                          │ • Sentiment Charts   │  │
-    │                          │ • Call Browser       │  │
-    │                          │ • Issue Explorer     │  │
-    │                          └──────────────────────┘  │
-    │                                                     │
-    └─────────────────────────────────────────────────────┘
+    │  ┌─────────────┐  Cortex AI    ┌──────────────┐   │
+    │  │ DATA        │ ────────────> │ RESULTS      │   │
+    │  │ Sources     │  Transcribe   │ Tables       │   │
+    │  │             │  Translate    │              │   │
+    │  │ @CUSTOMER_  │  Sentiment    │ transcription│   │
+    │  │  CALLS      │  Classify     │ _results     │   │
+    │  │ @COMPANY_   │  Summarize    │              │   │
+    │  │  DOCUMENTS  │  Parse        │ chat_        │   │
+    │  │ CHAT_LOGS   │  Extract      │ validation_  │   │
+    │  │ SUPPORT_    │               │ results      │   │
+    │  │  TICKETS    │               │              │   │
+    │  └─────────────┘               │ ticket_chat_ │   │
+    │                                │ alignment    │   │
+    │                                └──────┬───────┘   │
+    │                                       │           │
+    │                       ┌───────────────▼────────┐  │
+    │                       │ STREAMLIT DASHBOARD    │  │
+    │                       │ • KPI Metrics          │  │
+    │                       │ • Sentiment Charts     │  │
+    │                       │ • Call Browser         │  │
+    │                       │ • Issue Explorer       │  │
+    │                       └────────────────────────┘  │
+    │                                                   │
+    └───────────────────────────────────────────────────┘
 ```
 
 ## Snowflake Features Covered
@@ -63,9 +63,20 @@ A 2-hour hands-on workshop where you build an end-to-end AI-powered customer ser
 
 ## Prerequisites
 
-- A Snowflake account in a [supported Cortex region](https://docs.snowflake.com/en/user-guide/snowflake-cortex/llm-functions#label-cortex-llm-availability)
-- A web browser (everything runs inside Snowflake — no local installs needed)
-- Warehouse size MEDIUM or larger (for audio processing)
+| Requirement | Details |
+|-------------|---------|
+| **Snowflake Account** | [Sign up for a free 30-day trial](https://signup.snowflake.com/) if you don't have one |
+| **Cortex Region** | Account must be in a [supported Cortex region](https://docs.snowflake.com/en/user-guide/snowflake-cortex/llm-functions#label-cortex-llm-availability) — or enable cross-region (see below) |
+| **Warehouse** | Size MEDIUM or larger recommended for audio processing |
+| **Role** | `ACCOUNTADMIN` or a role with privileges to create databases and use Cortex AI |
+| **Browser** | Any modern browser — everything runs inside Snowflake |
+
+### Not in a supported Cortex region?
+
+Run this command to enable cross-region AI function access:
+```sql
+ALTER ACCOUNT SET CORTEX_ENABLED_CROSS_REGION = 'ANY_REGION';
+```
 
 ## Lab Agenda
 
@@ -117,7 +128,9 @@ multimodal-customer-service-lab/
 | Setup Script | [setup.sql](setup.sql) |
 | Notebook | [notebook.ipynb](notebook.ipynb) |
 | Streamlit App | [streamlit_app.py](streamlit_app.py) |
+| Snowflake Trial | [signup.snowflake.com](https://signup.snowflake.com/) |
 | Cortex AI Docs | [docs.snowflake.com](https://docs.snowflake.com/en/sql-reference/functions-ai) |
+| Original Quickstart | [Snowflake Quickstarts](https://quickstarts.snowflake.com/guide/extracting-insights-from-multimodal-customer-data/) |
 
 ---
 

@@ -8,6 +8,29 @@ This step-by-step guide walks you through building an AI-powered customer servic
 
 ---
 
+## Before You Begin
+
+### Need a Snowflake account?
+
+👉 **[Sign up for a free 30-day trial](https://signup.snowflake.com/)**
+
+### Account Requirements
+
+| Requirement | Details |
+|-------------|---------|
+| **Region** | Must be in a [supported Cortex region](https://docs.snowflake.com/en/user-guide/snowflake-cortex/llm-functions#label-cortex-llm-availability) |
+| **Warehouse** | MEDIUM or larger recommended for audio processing |
+| **Role** | `ACCOUNTADMIN` or equivalent privileges |
+
+### Not in a supported region?
+
+Run this command first to enable cross-region AI function access:
+```sql
+ALTER ACCOUNT SET CORTEX_ENABLED_CROSS_REGION = 'ANY_REGION';
+```
+
+---
+
 ## Lab Agenda
 
 | Module | Topic | Duration |
@@ -348,6 +371,8 @@ You've built a complete multimodal customer service analytics system that:
 
 ## Resources
 
+- [Snowflake Free Trial](https://signup.snowflake.com/)
 - [Cortex AI Functions Documentation](https://docs.snowflake.com/en/sql-reference/functions-ai)
 - [Streamlit in Snowflake Guide](https://docs.snowflake.com/en/developer-guide/streamlit/about-streamlit)
 - [Snowflake Notebooks](https://docs.snowflake.com/en/user-guide/ui-snowsight/notebooks)
+- [Original Quickstart](https://quickstarts.snowflake.com/guide/extracting-insights-from-multimodal-customer-data/)
