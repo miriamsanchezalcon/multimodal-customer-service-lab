@@ -41,7 +41,7 @@
   <img src="assets/divider.svg" width="400">
 </p>
 
-<h2><img src="https://img.shields.io/badge/MODULE_0-11567C?style=for-the-badge" alt="Module 0"/> &nbsp; Environment Setup</h2>
+<h2><img src="https://img.shields.io/badge/MODULE_0-11567C?style=for-the-badge" alt="Module 0" align="top"/> &nbsp; Environment Setup</h2>
 
 **Duration: 10 minutes**
 
@@ -85,7 +85,7 @@ Set up the database, stages, and sample data needed for the lab.
   <img src="assets/divider.svg" width="400">
 </p>
 
-<h2><img src="https://img.shields.io/badge/MODULE_1-11567C?style=for-the-badge" alt="Module 1"/> &nbsp; Audio Processing Pipeline</h2>
+<h2><img src="https://img.shields.io/badge/MODULE_1-11567C?style=for-the-badge" alt="Module 1" align="top"/> &nbsp; Audio Processing Pipeline</h2>
 
 **Duration: 30 minutes**
 
@@ -157,7 +157,7 @@ Set up the database, stages, and sample data needed for the lab.
   <img src="assets/divider.svg" width="400">
 </p>
 
-<h2><img src="https://img.shields.io/badge/MODULE_2-11567C?style=for-the-badge" alt="Module 2"/> &nbsp; Document Processing</h2>
+<h2><img src="https://img.shields.io/badge/MODULE_2-11567C?style=for-the-badge" alt="Module 2" align="top"/> &nbsp; Document Processing</h2>
 
 **Duration: 15 minutes**
 
@@ -194,7 +194,7 @@ Set up the database, stages, and sample data needed for the lab.
   <img src="assets/divider.svg" width="400">
 </p>
 
-<h2><img src="https://img.shields.io/badge/MODULE_3-11567C?style=for-the-badge" alt="Module 3"/> &nbsp; Chat & Ticket Validation</h2>
+<h2><img src="https://img.shields.io/badge/MODULE_3-11567C?style=for-the-badge" alt="Module 3" align="top"/> &nbsp; Chat & Ticket Validation</h2>
 
 **Duration: 25 minutes**
 
@@ -253,7 +253,7 @@ AI_EXTRACT(
   <img src="assets/divider.svg" width="400">
 </p>
 
-<h2><img src="https://img.shields.io/badge/MODULE_4-11567C?style=for-the-badge" alt="Module 4"/> &nbsp; Build Streamlit Dashboard</h2>
+<h2><img src="https://img.shields.io/badge/MODULE_4-11567C?style=for-the-badge" alt="Module 4" align="top"/> &nbsp; Build Streamlit Dashboard</h2>
 
 **Duration: 25 minutes**
 
@@ -293,7 +293,7 @@ An interactive dashboard showing:
   <img src="assets/divider.svg" width="400">
 </p>
 
-<h2><img src="https://img.shields.io/badge/MODULE_5-11567C?style=for-the-badge" alt="Module 5"/> &nbsp; Explore & Interact</h2>
+<h2><img src="https://img.shields.io/badge/MODULE_5-11567C?style=for-the-badge" alt="Module 5" align="top"/> &nbsp; Explore & Interact</h2>
 
 **Duration: 15 minutes**
 
