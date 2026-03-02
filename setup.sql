@@ -36,11 +36,12 @@ COPY FILES
 -- Refresh stage directory
 ALTER STAGE MULTIMODAL_CUSTOMER_SERVICE.DATA.CUSTOMER_CALLS REFRESH;
 
--- Create table listing audio files
+-- Create table listing audio files (limit to 5 for lab timing — stage has 101 files)
 CREATE OR REPLACE TABLE DATA.audio_file_list AS 
 SELECT 
     RELATIVE_PATH AS file_name
-FROM DIRECTORY(@MULTIMODAL_CUSTOMER_SERVICE.DATA.Customer_Calls);
+FROM DIRECTORY(@MULTIMODAL_CUSTOMER_SERVICE.DATA.Customer_Calls)
+LIMIT 5;
 
 -- ============================================================================
 -- PDF DOCUMENTS SETUP

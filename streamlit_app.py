@@ -11,6 +11,24 @@ def esc(text):
         return ""
     return str(text).replace("$", "\\$")
 
+def safe_query(sql, default=None):
+    """Run a query, returning default if the table doesn't exist yet."""
+    try:
+        return session.sql(sql).collect()
+    except Exception:
+        return default
+
+def safe_count(table, where=""):
+    """Safely count rows in a table that may not exist yet."""
+    clause = f" WHERE {where}" if where else ""
+    result = safe_query(f"SELECT COUNT(*) FROM {table}{clause}")
+    return result[0][0] if result else 0
+
+def table_exists(name):
+    """Check if a table exists in the current schema."""
+    result = safe_query(f"SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '{name}' AND TABLE_SCHEMA = CURRENT_SCHEMA()")
+    return bool(result)
+
 # Clean Snowflake-inspired CSS
 st.markdown("""
 <style>
@@ -97,11 +115,11 @@ with tab1:
     # Metrics row
     col1, col2, col3, col4 = st.columns(4)
     
-    calls = session.sql("SELECT COUNT(*) FROM transcription_results").collect()[0][0]
-    docs = session.sql("SELECT COUNT(*) FROM parsed_documents_raw").collect()[0][0]
-    chats = session.sql("SELECT COUNT(*) FROM chat_validation_results").collect()[0][0]
-    flagged = session.sql("SELECT COUNT(*) FROM chat_validation_results WHERE is_flagged = TRUE").collect()[0][0]
-    misaligned = session.sql("SELECT COUNT(*) FROM ticket_chat_alignment WHERE alignment_status = 'misaligned'").collect()[0][0]
+    calls = safe_count("transcription_results")
+    docs = safe_count("parsed_documents_raw")
+    chats = safe_count("chat_validation_results")
+    flagged = safe_count("chat_validation_results", "is_flagged = TRUE")
+    misaligned = safe_count("ticket_chat_alignment", "alignment_status = 'misaligned'")
     
     col1.metric("Calls Processed", calls)
     col2.metric("Documents Parsed", docs)
@@ -134,27 +152,30 @@ with tab1:
     
     with col2:
         st.subheader("Chat Sentiment (AI vs Reported)")
-        chat_sent_df = session.sql("""
-            SELECT 'AI Detected' AS source, ai_sentiment_normalized AS sentiment, COUNT(*) AS count
-            FROM chat_validation_results
-            WHERE ai_sentiment_normalized IS NOT NULL
-            GROUP BY ai_sentiment_normalized
-            UNION ALL
-            SELECT 'Agent Reported', self_reported_sentiment, COUNT(*)
-            FROM chat_validation_results
-            WHERE self_reported_sentiment IS NOT NULL
-            GROUP BY self_reported_sentiment
-        """).to_pandas()
-        if not chat_sent_df.empty:
-            chart = alt.Chart(chat_sent_df).mark_bar(cornerRadiusTopLeft=4, cornerRadiusTopRight=4).encode(
-                x=alt.X('SOURCE:N', title=None),
-                y=alt.Y('COUNT:Q', title='Count'),
-                color=alt.Color('SOURCE:N', scale=alt.Scale(range=['#29B5E8', '#11567C']), title='Source'),
-                column=alt.Column('SENTIMENT:N', title=None, header=alt.Header(labelOrient='bottom'))
-            ).properties(height=220, width=80)
-            st.altair_chart(chart)
+        if table_exists('CHAT_VALIDATION_RESULTS'):
+            chat_sent_df = session.sql("""
+                SELECT 'AI Detected' AS source, ai_sentiment_normalized AS sentiment, COUNT(*) AS count
+                FROM chat_validation_results
+                WHERE ai_sentiment_normalized IS NOT NULL
+                GROUP BY ai_sentiment_normalized
+                UNION ALL
+                SELECT 'Agent Reported', self_reported_sentiment, COUNT(*)
+                FROM chat_validation_results
+                WHERE self_reported_sentiment IS NOT NULL
+                GROUP BY self_reported_sentiment
+            """).to_pandas()
+            if not chat_sent_df.empty:
+                chart = alt.Chart(chat_sent_df).mark_bar(cornerRadiusTopLeft=4, cornerRadiusTopRight=4).encode(
+                    x=alt.X('SOURCE:N', title=None),
+                    y=alt.Y('COUNT:Q', title='Count'),
+                    color=alt.Color('SOURCE:N', scale=alt.Scale(range=['#29B5E8', '#11567C']), title='Source'),
+                    column=alt.Column('SENTIMENT:N', title=None, header=alt.Header(labelOrient='bottom'))
+                ).properties(height=220, width=80)
+                st.altair_chart(chart)
+            else:
+                st.info("No chat sentiment data yet")
         else:
-            st.info("No chat sentiment data yet")
+            st.info("Run notebook Module 3 to see chat validation data")
     
     st.divider()
     
@@ -163,46 +184,52 @@ with tab1:
     
     with col1:
         st.subheader("Chat Category Mismatches")
-        cat_df = session.sql("""
-            SELECT 
-                CASE WHEN self_reported_category = ai_classified_category 
-                     THEN 'Match' ELSE 'Mismatch' END AS status,
-                COUNT(*) AS count
-            FROM chat_validation_results
-            GROUP BY status
-        """).to_pandas()
-        if not cat_df.empty:
-            chart = alt.Chart(cat_df).mark_bar(cornerRadiusTopLeft=4, cornerRadiusTopRight=4).encode(
-                x=alt.X('STATUS:N', title=None),
-                y=alt.Y('COUNT:Q', title='Count'),
-                color=alt.Color('STATUS:N', scale=alt.Scale(domain=['Match', 'Mismatch'], range=['#2ecc71', '#e74c3c']), legend=None)
-            ).properties(height=250)
-            st.altair_chart(chart, use_container_width=True)
+        if table_exists('CHAT_VALIDATION_RESULTS'):
+            cat_df = session.sql("""
+                SELECT 
+                    CASE WHEN self_reported_category = ai_classified_category 
+                         THEN 'Match' ELSE 'Mismatch' END AS status,
+                    COUNT(*) AS count
+                FROM chat_validation_results
+                GROUP BY status
+            """).to_pandas()
+            if not cat_df.empty:
+                chart = alt.Chart(cat_df).mark_bar(cornerRadiusTopLeft=4, cornerRadiusTopRight=4).encode(
+                    x=alt.X('STATUS:N', title=None),
+                    y=alt.Y('COUNT:Q', title='Count'),
+                    color=alt.Color('STATUS:N', scale=alt.Scale(domain=['Match', 'Mismatch'], range=['#2ecc71', '#e74c3c']), legend=None)
+                ).properties(height=250)
+                st.altair_chart(chart, use_container_width=True)
+            else:
+                st.info("No category data yet")
         else:
-            st.info("No category data yet")
+            st.info("Run notebook Module 3 to see category analysis")
     
     with col2:
         st.subheader("Ticket Alignment Severity")
-        severity_df = session.sql("""
-            SELECT 
-                COALESCE(misalignment_severity, 'aligned') AS severity,
-                COUNT(*) AS count
-            FROM ticket_chat_alignment
-            GROUP BY severity
-            ORDER BY CASE severity 
-                WHEN 'critical' THEN 1 WHEN 'moderate' THEN 2 
-                WHEN 'minor' THEN 3 ELSE 4 END
-        """).to_pandas()
-        if not severity_df.empty:
-            sev_colors = {'critical': '#e74c3c', 'moderate': '#f39c12', 'minor': '#2ecc71', 'aligned': '#29B5E8'}
-            chart = alt.Chart(severity_df).mark_bar(cornerRadiusTopLeft=4, cornerRadiusTopRight=4).encode(
-                x=alt.X('SEVERITY:N', title=None, sort=['critical', 'moderate', 'minor', 'aligned']),
-                y=alt.Y('COUNT:Q', title='Count'),
-                color=alt.Color('SEVERITY:N', scale=alt.Scale(domain=list(sev_colors.keys()), range=list(sev_colors.values())), legend=None)
-            ).properties(height=250)
-            st.altair_chart(chart, use_container_width=True)
+        if table_exists('TICKET_CHAT_ALIGNMENT'):
+            severity_df = session.sql("""
+                SELECT 
+                    COALESCE(misalignment_severity, 'aligned') AS severity,
+                    COUNT(*) AS count
+                FROM ticket_chat_alignment
+                GROUP BY severity
+                ORDER BY CASE severity 
+                    WHEN 'critical' THEN 1 WHEN 'moderate' THEN 2 
+                    WHEN 'minor' THEN 3 ELSE 4 END
+            """).to_pandas()
+            if not severity_df.empty:
+                sev_colors = {'critical': '#e74c3c', 'moderate': '#f39c12', 'minor': '#2ecc71', 'aligned': '#29B5E8'}
+                chart = alt.Chart(severity_df).mark_bar(cornerRadiusTopLeft=4, cornerRadiusTopRight=4).encode(
+                    x=alt.X('SEVERITY:N', title=None, sort=['critical', 'moderate', 'minor', 'aligned']),
+                    y=alt.Y('COUNT:Q', title='Count'),
+                    color=alt.Color('SEVERITY:N', scale=alt.Scale(domain=list(sev_colors.keys()), range=list(sev_colors.values())), legend=None)
+                ).properties(height=250)
+                st.altair_chart(chart, use_container_width=True)
+            else:
+                st.info("No alignment data yet")
         else:
-            st.info("No alignment data yet")
+            st.info("Run notebook Module 3 to see alignment analysis")
     
     st.divider()
     
@@ -259,88 +286,94 @@ with tab2:
 with tab3:
     st.subheader("Chat Validation Results")
     
-    col1, col2 = st.columns([1, 3])
-    with col1:
-        show_flagged = st.checkbox("Show flagged only", value=True)
-    
-    query = """
-        SELECT chat_id, customer_name, 
-               self_reported_category, ai_classified_category,
-               self_reported_sentiment, ai_sentiment_normalized,
-               is_flagged, flag_reasons
-        FROM chat_validation_results
-    """
-    if show_flagged:
-        query += " WHERE is_flagged = TRUE"
-    query += " ORDER BY chat_timestamp DESC LIMIT 50"
-    
-    chats_df = session.sql(query).to_pandas()
-    
-    if not chats_df.empty:
-        # Summary metrics
-        col1, col2, col3 = st.columns(3)
-        total = len(chats_df)
-        cat_mismatch = len(chats_df[chats_df['SELF_REPORTED_CATEGORY'] != chats_df['AI_CLASSIFIED_CATEGORY']])
-        sent_mismatch = len(chats_df[chats_df['SELF_REPORTED_SENTIMENT'] != chats_df['AI_SENTIMENT_NORMALIZED']])
+    if table_exists('CHAT_VALIDATION_RESULTS'):
+        col1, col2 = st.columns([1, 3])
+        with col1:
+            show_flagged = st.checkbox("Show flagged only", value=True)
         
-        col1.metric("Showing", total)
-        col2.metric("Category Mismatches", cat_mismatch)
-        col3.metric("Sentiment Mismatches", sent_mismatch)
+        query = """
+            SELECT chat_id, customer_name, 
+                   self_reported_category, ai_classified_category,
+                   self_reported_sentiment, ai_sentiment_normalized,
+                   is_flagged, flag_reasons
+            FROM chat_validation_results
+        """
+        if show_flagged:
+            query += " WHERE is_flagged = TRUE"
+        query += " ORDER BY chat_timestamp DESC LIMIT 50"
         
-        st.divider()
-        st.dataframe(chats_df, use_container_width=True)
+        chats_df = session.sql(query).to_pandas()
+        
+        if not chats_df.empty:
+            # Summary metrics
+            col1, col2, col3 = st.columns(3)
+            total = len(chats_df)
+            cat_mismatch = len(chats_df[chats_df['SELF_REPORTED_CATEGORY'] != chats_df['AI_CLASSIFIED_CATEGORY']])
+            sent_mismatch = len(chats_df[chats_df['SELF_REPORTED_SENTIMENT'] != chats_df['AI_SENTIMENT_NORMALIZED']])
+            
+            col1.metric("Showing", total)
+            col2.metric("Category Mismatches", cat_mismatch)
+            col3.metric("Sentiment Mismatches", sent_mismatch)
+            
+            st.divider()
+            st.dataframe(chats_df, use_container_width=True)
+        else:
+            st.info("No flagged chats found." if show_flagged else "No chats processed yet.")
     else:
-        st.info("No flagged chats found." if show_flagged else "No chats processed yet.")
+        st.info("No data yet. Complete notebook Module 3 (Chat & Ticket Validation) first, then refresh this page.")
 
 # ============ TAB 4: ALIGNMENT ISSUES ============
 with tab4:
     st.subheader("Ticket-Chat Alignment Analysis")
     
-    # Summary
-    col1, col2, col3 = st.columns(3)
-    
-    total = session.sql("SELECT COUNT(*) FROM ticket_chat_alignment").collect()[0][0]
-    aligned = session.sql("SELECT COUNT(*) FROM ticket_chat_alignment WHERE alignment_status = 'aligned'").collect()[0][0]
-    critical = session.sql("SELECT COUNT(*) FROM ticket_chat_alignment WHERE misalignment_severity = 'critical'").collect()[0][0]
-    
-    col1.metric("Total Pairs", total)
-    col2.metric("Aligned", aligned, f"{round(aligned/total*100)}%" if total > 0 else "0%")
-    col3.metric("Critical Issues", critical)
-    
-    st.divider()
-    
-    # Filter
-    severity_filter = st.selectbox("Filter by severity", ["All", "critical", "moderate", "minor"])
-    
-    query = """
-        SELECT ticket_number, ticket_subject, alignment_status, alignment_confidence,
-               alignment_reason, misalignment_severity, category_mismatch_flag, product_mismatch_flag
-        FROM ticket_chat_alignment
-        WHERE alignment_status = 'misaligned'
-    """
-    if severity_filter != "All":
-        query += f" AND misalignment_severity = '{severity_filter}'"
-    query += " ORDER BY CASE misalignment_severity WHEN 'critical' THEN 1 WHEN 'moderate' THEN 2 ELSE 3 END LIMIT 20"
-    
-    issues_df = session.sql(query).to_pandas()
-    
-    if not issues_df.empty:
-        for _, row in issues_df.iterrows():
-            icon = {"critical": "🔴", "moderate": "🟡", "minor": "🟢"}.get(row['MISALIGNMENT_SEVERITY'], "⚪")
-            
-            with st.expander(f"{icon} {row['TICKET_NUMBER']}: {esc(row['TICKET_SUBJECT'][:60])}..."):
-                col1, col2 = st.columns(2)
-                col1.metric("Alignment", row['ALIGNMENT_STATUS'])
-                col2.metric("Confidence", row['ALIGNMENT_CONFIDENCE'])
+    if table_exists('TICKET_CHAT_ALIGNMENT'):
+        # Summary
+        col1, col2, col3 = st.columns(3)
+        
+        total = safe_count("ticket_chat_alignment")
+        aligned = safe_count("ticket_chat_alignment", "alignment_status = 'aligned'")
+        critical = safe_count("ticket_chat_alignment", "misalignment_severity = 'critical'")
+        
+        col1.metric("Total Pairs", total)
+        col2.metric("Aligned", aligned, f"{round(aligned/total*100)}%" if total > 0 else "0%")
+        col3.metric("Critical Issues", critical)
+        
+        st.divider()
+        
+        # Filter
+        severity_filter = st.selectbox("Filter by severity", ["All", "critical", "moderate", "minor"])
+        
+        query = """
+            SELECT ticket_number, ticket_subject, alignment_status, alignment_confidence,
+                   alignment_reason, misalignment_severity, category_mismatch_flag, product_mismatch_flag
+            FROM ticket_chat_alignment
+            WHERE alignment_status = 'misaligned'
+        """
+        if severity_filter != "All":
+            query += f" AND misalignment_severity = '{severity_filter}'"
+        query += " ORDER BY CASE misalignment_severity WHEN 'critical' THEN 1 WHEN 'moderate' THEN 2 ELSE 3 END LIMIT 20"
+        
+        issues_df = session.sql(query).to_pandas()
+        
+        if not issues_df.empty:
+            for _, row in issues_df.iterrows():
+                icon = {"critical": "🔴", "moderate": "🟡", "minor": "🟢"}.get(row['MISALIGNMENT_SEVERITY'], "⚪")
                 
-                st.write(f"**Reason:** {esc(row['ALIGNMENT_REASON'])}")
-                
-                if row['CATEGORY_MISMATCH_FLAG']:
-                    st.warning("Category mismatch detected")
-                if row['PRODUCT_MISMATCH_FLAG']:
-                    st.warning("Product mismatch detected")
+                with st.expander(f"{icon} {row['TICKET_NUMBER']}: {esc(row['TICKET_SUBJECT'][:60])}..."):
+                    col1, col2 = st.columns(2)
+                    col1.metric("Alignment", row['ALIGNMENT_STATUS'])
+                    col2.metric("Confidence", row['ALIGNMENT_CONFIDENCE'])
+                    
+                    st.write(f"**Reason:** {esc(row['ALIGNMENT_REASON'])}")
+                    
+                    if row['CATEGORY_MISMATCH_FLAG']:
+                        st.warning("Category mismatch detected")
+                    if row['PRODUCT_MISMATCH_FLAG']:
+                        st.warning("Product mismatch detected")
+        else:
+            st.success("No misalignment issues found!")
     else:
-        st.success("No misalignment issues found!")
+        st.info("No data yet. Complete notebook Module 3 (Chat & Ticket Validation) first, then refresh this page.")
 
 # Footer
 st.divider()
