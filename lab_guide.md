@@ -13,13 +13,14 @@
 |---|---|
 | **Need a Snowflake account?** | [Sign up for a free 30-day trial](https://signup.snowflake.com/) |
 | **Region** | Must be in a [supported Cortex region](https://docs.snowflake.com/en/user-guide/snowflake-cortex/llm-functions#label-cortex-llm-availability) |
-| **Warehouse** | MEDIUM or larger recommended for audio processing |
+| **Warehouse** | The setup script creates a MEDIUM warehouse (`CALL_CENTER_WH`) automatically |
 | **Role** | `ACCOUNTADMIN` or equivalent privileges |
 
-> **Not in a supported region?** Run this first:
+> **Not in a supported region?** No worries — the setup script automatically runs:
 > ```sql
 > ALTER ACCOUNT SET CORTEX_ENABLED_CROSS_REGION = 'ANY_REGION';
 > ```
+> This enables cross-region Cortex AI so all AI functions work regardless of your account's region.
 
 <br>
 
@@ -71,12 +72,13 @@ Set up the database, stages, and sample data needed for the lab.
 
 | Object | Description |
 |--------|-------------|
+| `CALL_CENTER_WH` | MEDIUM warehouse for running queries and AI functions |
 | `MULTIMODAL_CUSTOMER_SERVICE` | Database for the lab |
 | `DATA` schema | Contains all tables and stages |
-| `@CUSTOMER_CALLS` | Stage with 5 audio recordings |
+| `@CUSTOMER_CALLS` | Stage with 5 audio recordings (from a pool of 101 in the source) |
 | `@COMPANY_DOCUMENTS` | Stage with PDF documents |
-| `CHAT_LOGS` | 20 customer chat transcripts |
-| `SUPPORT_TICKETS` | 20 support tickets linked to chats |
+| `CHAT_LOGS` | 100 customer chat transcripts |
+| `SUPPORT_TICKETS` | 100 support tickets linked to chats |
 | `transcription_results` | Empty table for storing processed calls |
 
 <br>
@@ -102,6 +104,9 @@ Set up the database, stages, and sample data needed for the lab.
    - Download [`notebook.ipynb`](notebook.ipynb)
    - In Snowsight: **Projects** > **Notebooks** > **Import .ipynb file**
    - Select database: `MULTIMODAL_CUSTOMER_SERVICE`, schema: `DATA`
+   - Select warehouse: `CALL_CENTER_WH`
+   
+   > **Why select a warehouse?** The notebook runs SQL queries and Cortex AI functions that require compute. The warehouse you select here will be used to execute all cells in the notebook.
 
 2. **Run Step 0: Explore Data** cells to see what you're working with
 
@@ -214,7 +219,7 @@ Set up the database, stages, and sample data needed for the lab.
 
 ### Steps
 
-1. **Run PROCESS_CHAT_LOGS** cell in Part 3
+1. **Run the Chat Validation cell** in Part 3 of the notebook
    - Re-classifies chats using `AI_CLASSIFY`
    - Re-analyzes sentiment using `AI_SENTIMENT`
    - Extracts structured fields using `AI_EXTRACT`
@@ -227,9 +232,9 @@ Set up the database, stages, and sample data needed for the lab.
    WHERE is_flagged = TRUE;
    ```
 
-3. **Run ALIGN_CHAT_LOG_WITH_SUPPORT_TICKETS** cell in Part 4
-   - Uses `AI_COMPLETE` to semantically compare ticket and chat
-   - Returns alignment status, confidence, and reasoning
+3. **Run the Ticket-Chat Alignment cell** in Part 4 of the notebook
+   - Uses `AI_COMPLETE` to semantically compare each ticket against its linked chat
+   - Returns alignment status, confidence score, and reasoning
 
 4. **Review misalignments**:
    ```sql
@@ -281,13 +286,20 @@ An interactive dashboard showing:
    - Name: `Customer Service Analytics`
    - Database: `MULTIMODAL_CUSTOMER_SERVICE`
    - Schema: `DATA`
-   - Warehouse: Your warehouse
+   - Warehouse: `CALL_CENTER_WH`
 
 2. **Replace the default code** with the contents of [`streamlit_app.py`](streamlit_app.py)
 
-3. **Click Run** to launch the app
+3. **Upload the dependencies file**:
+   - In the Streamlit editor, find the file browser on the left sidebar
+   - Click the **Upload** button (or drag and drop)
+   - Upload [`environment.yml`](environment.yml) from this repository
+   
+   > **Why is this needed?** Streamlit in Snowflake uses `environment.yml` to install Python packages from the Snowflake Anaconda channel. This app requires `pandas` and `snowflake-snowpark-python` for data manipulation and connecting to your Snowflake tables. Without this file, the app will fail with import errors.
 
-4. **Explore the tabs**:
+4. **Click Run** to launch the app
+
+5. **Explore the tabs**:
 
 | Tab | What It Shows |
 |-----|---------------|
@@ -361,6 +373,7 @@ To remove all lab resources:
 
 ```sql
 DROP DATABASE IF EXISTS MULTIMODAL_CUSTOMER_SERVICE;
+DROP WAREHOUSE IF EXISTS CALL_CENTER_WH;
 ```
 
 <br>
