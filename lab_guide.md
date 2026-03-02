@@ -6,42 +6,37 @@
 
 This step-by-step guide walks you through building an AI-powered customer service analytics system using Snowflake Cortex AI functions.
 
----
+<br>
 
-## Before You Begin
+## 🚀 Before You Begin
 
-### Need a Snowflake account?
-
-👉 **[Sign up for a free 30-day trial](https://signup.snowflake.com/)**
-
-### Account Requirements
-
-| Requirement | Details |
-|-------------|---------|
+| | |
+|---|---|
+| **Need a Snowflake account?** | 👉 [Sign up for a free 30-day trial](https://signup.snowflake.com/) |
 | **Region** | Must be in a [supported Cortex region](https://docs.snowflake.com/en/user-guide/snowflake-cortex/llm-functions#label-cortex-llm-availability) |
 | **Warehouse** | MEDIUM or larger recommended for audio processing |
 | **Role** | `ACCOUNTADMIN` or equivalent privileges |
 
-### Not in a supported region?
+> **Not in a supported region?** Run this first:
+> ```sql
+> ALTER ACCOUNT SET CORTEX_ENABLED_CROSS_REGION = 'ANY_REGION';
+> ```
 
-Run this command first to enable cross-region AI function access:
-```sql
-ALTER ACCOUNT SET CORTEX_ENABLED_CROSS_REGION = 'ANY_REGION';
-```
+<br>
 
----
-
-## Lab Agenda
+## 📋 Lab Agenda
 
 | Module | Topic | Duration |
-|--------|-------|----------|
+|:------:|-------|:--------:|
 | 0 | Environment Setup | 10 min |
 | 1 | Audio Processing Pipeline | 30 min |
 | 2 | Document Processing | 15 min |
 | 3 | Chat & Ticket Validation | 25 min |
 | 4 | Build Streamlit Dashboard | 25 min |
 | 5 | Explore & Interact | 15 min |
-| **Total** | | **2 hours** |
+| | **Total** | **2 hours** |
+
+<br>
 
 ---
 
@@ -51,7 +46,7 @@ ALTER ACCOUNT SET CORTEX_ENABLED_CROSS_REGION = 'ANY_REGION';
 
 ## Module 0: Environment Setup
 
-**Duration: 10 minutes**
+⏱️ **Duration: 10 minutes**
 
 ### What You'll Do
 Set up the database, stages, and sample data needed for the lab.
@@ -62,11 +57,11 @@ Set up the database, stages, and sample data needed for the lab.
 
 2. **Copy and run** the entire contents of [`setup.sql`](setup.sql)
 
-3. **Verify setup** succeeded by checking these queries return data:
+3. **Verify setup** succeeded:
    ```sql
-   SELECT COUNT(*) FROM DATA.audio_file_list;        -- Should return 5
-   SELECT COUNT(*) FROM CHAT_LOGS;                   -- Should return 20
-   SELECT COUNT(*) FROM SUPPORT_TICKETS;             -- Should return 20
+   SELECT COUNT(*) FROM DATA.audio_file_list;   -- Should return 5
+   SELECT COUNT(*) FROM CHAT_LOGS;              -- Should return 20
+   SELECT COUNT(*) FROM SUPPORT_TICKETS;        -- Should return 20
    ```
 
 4. **Verify stages** have files:
@@ -87,7 +82,7 @@ Set up the database, stages, and sample data needed for the lab.
 | `SUPPORT_TICKETS` | 20 support tickets linked to chats |
 | `transcription_results` | Empty table for storing processed calls |
 
----
+<br>
 
 <p align="center">
   <img src="assets/divider.svg" width="400">
@@ -95,7 +90,7 @@ Set up the database, stages, and sample data needed for the lab.
 
 ## Module 1: Audio Processing Pipeline
 
-**Duration: 30 minutes**
+⏱️ **Duration: 30 minutes**
 
 ### What You'll Learn
 - Convert audio files to text with `AI_TRANSCRIBE`
@@ -115,15 +110,17 @@ Set up the database, stages, and sample data needed for the lab.
 
 3. **Run the Complex Pipeline** cell (first code cell in Part 1)
    - This chains all 6 AI functions together
-   - ⏱️ Takes ~2-3 minutes for 5 audio files
+   - Takes ~2-3 minutes for 5 audio files
 
 4. **Work through each AI function** step by step:
-   - `AI_TRANSCRIBE` → Converts audio to text with speaker segments
-   - `FLATTEN` → Combines segments into full conversation
-   - `AI_TRANSLATE` → Translates to English (auto-detects source)
-   - `AI_SENTIMENT` → Classifies as positive/negative/neutral/mixed
-   - `AI_CLASSIFY` → Assigns to one of 5 business categories
-   - `AI_COMPLETE` → Generates 50-word summary
+   | Function | What It Does |
+   |----------|--------------|
+   | `AI_TRANSCRIBE` | Converts audio to text with speaker segments |
+   | `FLATTEN` | Combines segments into full conversation |
+   | `AI_TRANSLATE` | Translates to English (auto-detects source) |
+   | `AI_SENTIMENT` | Classifies as positive/negative/neutral/mixed |
+   | `AI_CLASSIFY` | Assigns to one of 5 business categories |
+   | `AI_COMPLETE` | Generates 50-word summary |
 
 5. **View results**:
    ```sql
@@ -133,7 +130,9 @@ Set up the database, stages, and sample data needed for the lab.
 
 ### Key Concepts
 
-**AI_TRANSCRIBE output structure:**
+<details>
+<summary><strong>AI_TRANSCRIBE output structure</strong></summary>
+
 ```json
 {
   "audio_duration": 45.2,
@@ -143,15 +142,19 @@ Set up the database, stages, and sample data needed for the lab.
   ]
 }
 ```
+</details>
 
-**AI_CLASSIFY categories used:**
+<details>
+<summary><strong>AI_CLASSIFY categories used</strong></summary>
+
 1. 🔒 Fraud & Security Issues
 2. 🖥️ Technical & System Errors
 3. 💳 Payment & Transaction Problems
 4. 📝 Account Changes & Modifications
 5. ❓ General Inquiries & Information Requests
+</details>
 
----
+<br>
 
 <p align="center">
   <img src="assets/divider.svg" width="400">
@@ -159,10 +162,10 @@ Set up the database, stages, and sample data needed for the lab.
 
 ## Module 2: Document Processing
 
-**Duration: 15 minutes**
+⏱️ **Duration: 15 minutes**
 
 ### What You'll Learn
-- Extract structured content from PDFs with `AI_PARSE_DOCUMENT`
+- Extract structured content from PDFs with `PARSE_DOCUMENT`
 
 ### Steps
 
@@ -176,15 +179,19 @@ Set up the database, stages, and sample data needed for the lab.
    ```
 
 3. **Understand the parameters**:
-   - `mode: 'LAYOUT'` - Preserves document structure
-   - `page_split: TRUE` - Returns content page by page
+   | Parameter | Value | Description |
+   |-----------|-------|-------------|
+   | `mode` | `'LAYOUT'` | Preserves document structure |
+   | `page_split` | `TRUE` | Returns content page by page |
 
 ### Use Cases
-- Policy documents → Extract terms and conditions
-- Invoices → Pull line items and totals
-- Contracts → Identify key clauses
+| Document Type | What You Can Extract |
+|---------------|---------------------|
+| Policy documents | Terms and conditions |
+| Invoices | Line items and totals |
+| Contracts | Key clauses |
 
----
+<br>
 
 <p align="center">
   <img src="assets/divider.svg" width="400">
@@ -192,7 +199,7 @@ Set up the database, stages, and sample data needed for the lab.
 
 ## Module 3: Chat & Ticket Validation
 
-**Duration: 25 minutes**
+⏱️ **Duration: 25 minutes**
 
 ### What You'll Learn
 - Validate agent classifications with AI
@@ -225,7 +232,9 @@ Set up the database, stages, and sample data needed for the lab.
    WHERE alignment_status = 'misaligned';
    ```
 
-### AI_EXTRACT Schema Used
+<details>
+<summary><strong>AI_EXTRACT Schema Used</strong></summary>
+
 ```sql
 AI_EXTRACT(
     text => full_conversation,
@@ -239,8 +248,9 @@ AI_EXTRACT(
     )
 )
 ```
+</details>
 
----
+<br>
 
 <p align="center">
   <img src="assets/divider.svg" width="400">
@@ -248,7 +258,7 @@ AI_EXTRACT(
 
 ## Module 4: Build Streamlit Dashboard
 
-**Duration: 25 minutes**
+⏱️ **Duration: 25 minutes**
 
 ### What You'll Build
 An interactive dashboard showing:
@@ -272,21 +282,15 @@ An interactive dashboard showing:
 3. **Click Run** to launch the app
 
 4. **Explore the tabs**:
-   - **Overview**: KPI cards and distribution charts
-   - **Call Analytics**: Browse processed calls with summaries
-   - **Chat Validation**: See flagged chats and mismatches
-   - **Alignment Issues**: Review ticket-chat discrepancies
-
-### Dashboard Features
 
 | Tab | What It Shows |
 |-----|---------------|
-| Overview | KPI metrics, sentiment chart, category chart |
-| Call Analytics | Expandable cards with call summaries |
-| Chat Validation | Filterable table of validation results |
-| Alignment Issues | Severity-sorted list of misaligned tickets |
+| **Overview** | KPI metrics, sentiment chart, category chart |
+| **Call Analytics** | Expandable cards with call summaries |
+| **Chat Validation** | Filterable table of validation results |
+| **Alignment Issues** | Severity-sorted list of misaligned tickets |
 
----
+<br>
 
 <p align="center">
   <img src="assets/divider.svg" width="400">
@@ -294,50 +298,58 @@ An interactive dashboard showing:
 
 ## Module 5: Explore & Interact
 
-**Duration: 15 minutes**
+⏱️ **Duration: 15 minutes**
 
 ### Exercises
 
-1. **Modify the classification categories**
-   - Edit the `AI_CLASSIFY` call to use your own business categories
-   - Re-run on the chat data
+| # | Challenge | Hint |
+|---|-----------|------|
+| 1 | **Modify the classification categories** | Edit the `AI_CLASSIFY` call to use your own business categories |
+| 2 | **Try different LLM models** | Replace `'claude-sonnet-4-5'` with `'llama3.1-70b'` or `'mistral-large2'` |
+| 3 | **Create a new validation rule** | Add a check for high-urgency tickets with neutral sentiment |
+| 4 | **Explore the raw data** | Look at the `segments` column to see speaker diarization |
 
-2. **Try different LLM models**
-   - Replace `'claude-sonnet-4-5'` with `'llama3.1-70b'` or `'mistral-large2'`
-   - Compare summary quality
-
-3. **Create a new validation rule**
-   - Add a check for high-urgency tickets with neutral sentiment
-
-4. **Explore the raw data**
-   - Look at the `segments` column to see speaker diarization
-   - Examine `extracted_features` JSON structure
+<br>
 
 ---
 
-## Troubleshooting
+## 🔧 Troubleshooting
 
-### "Function AI_TRANSCRIBE does not exist"
+<details>
+<summary><strong>"Function AI_TRANSCRIBE does not exist"</strong></summary>
+
 Your account may not be in a supported Cortex region. Run:
 ```sql
 ALTER ACCOUNT SET CORTEX_ENABLED_CROSS_REGION = 'ANY_REGION';
 ```
+</details>
 
-### Transcription is slow
+<details>
+<summary><strong>Transcription is slow</strong></summary>
+
 Audio processing is compute-intensive. Use a MEDIUM or larger warehouse. Expected: ~30-60 seconds per audio file.
+</details>
 
-### No data in dashboard
+<details>
+<summary><strong>No data in dashboard</strong></summary>
+
 Make sure you've run the notebook cells first to populate the results tables.
+</details>
 
-### Streamlit permission errors
+<details>
+<summary><strong>Streamlit permission errors</strong></summary>
+
 Ensure your role has:
 - `USAGE` on the database and schema
 - `SELECT` on all tables
 - `USAGE` on the warehouse
+</details>
+
+<br>
 
 ---
 
-## Clean Up
+## 🧹 Clean Up
 
 To remove all lab resources:
 
@@ -345,34 +357,45 @@ To remove all lab resources:
 DROP DATABASE IF EXISTS MULTIMODAL_CUSTOMER_SERVICE;
 ```
 
+<br>
+
 ---
 
-## Congratulations! 🎉
+## 🎉 Congratulations!
 
 You've built a complete multimodal customer service analytics system that:
 
-✅ Transcribes audio calls to searchable text  
-✅ Translates conversations to English automatically  
-✅ Detects customer sentiment  
-✅ Classifies issues into business categories  
-✅ Generates AI summaries  
-✅ Parses PDF documents  
-✅ Validates agent classifications  
-✅ Cross-references tickets and chats  
-✅ Displays insights in an interactive dashboard  
+| ✅ | Capability |
+|---|------------|
+| ✅ | Transcribes audio calls to searchable text |
+| ✅ | Translates conversations to English automatically |
+| ✅ | Detects customer sentiment |
+| ✅ | Classifies issues into business categories |
+| ✅ | Generates AI summaries |
+| ✅ | Parses PDF documents |
+| ✅ | Validates agent classifications |
+| ✅ | Cross-references tickets and chats |
+| ✅ | Displays insights in an interactive dashboard |
 
 ### Next Steps
-- Connect your own audio files and documents
-- Customize categories for your business domain
-- Add scheduling with Snowflake Tasks for continuous processing
-- Build a Cortex Agent for natural language queries
+
+| What | Why |
+|------|-----|
+| Connect your own audio files and documents | Real-world testing |
+| Customize categories for your business domain | Better accuracy |
+| Add scheduling with Snowflake Tasks | Continuous processing |
+| Build a Cortex Agent | Natural language queries |
+
+<br>
 
 ---
 
-## Resources
+## 📚 Resources
 
-- [Snowflake Free Trial](https://signup.snowflake.com/)
-- [Cortex AI Functions Documentation](https://docs.snowflake.com/en/sql-reference/functions-ai)
-- [Streamlit in Snowflake Guide](https://docs.snowflake.com/en/developer-guide/streamlit/about-streamlit)
-- [Snowflake Notebooks](https://docs.snowflake.com/en/user-guide/ui-snowsight/notebooks)
-- [Original Quickstart](https://quickstarts.snowflake.com/guide/extracting-insights-from-multimodal-customer-data/)
+| Resource | Link |
+|----------|------|
+| Snowflake Free Trial | [signup.snowflake.com](https://signup.snowflake.com/) |
+| Cortex AI Functions | [Documentation](https://docs.snowflake.com/en/sql-reference/functions-ai) |
+| Streamlit in Snowflake | [Guide](https://docs.snowflake.com/en/developer-guide/streamlit/about-streamlit) |
+| Snowflake Notebooks | [Documentation](https://docs.snowflake.com/en/user-guide/ui-snowsight/notebooks) |
+| Original Quickstart | [Snowflake Quickstarts](https://quickstarts.snowflake.com/guide/extracting-insights-from-multimodal-customer-data/) |
