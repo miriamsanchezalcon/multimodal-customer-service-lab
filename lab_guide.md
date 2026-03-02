@@ -57,13 +57,13 @@ Set up the database, stages, and sample data needed for the lab.
 3. **Verify setup** succeeded:
    ```sql
    SELECT COUNT(*) FROM DATA.audio_file_list;   -- Should return 5
-   SELECT COUNT(*) FROM CHAT_LOGS;              -- Should return 20
-   SELECT COUNT(*) FROM SUPPORT_TICKETS;        -- Should return 20
+   SELECT COUNT(*) FROM CHAT_LOGS;              -- Should return 100
+   SELECT COUNT(*) FROM SUPPORT_TICKETS;        -- Should return 100
    ```
 
 4. **Verify stages** have files:
    ```sql
-   LIST @CUSTOMER_CALLS;       -- Should show .mp3 files
+   LIST @CUSTOMER_CALLS;       -- Should show .wav files
    LIST @COMPANY_DOCUMENTS;    -- Should show .pdf files
    ```
 
@@ -171,15 +171,15 @@ Set up the database, stages, and sample data needed for the lab.
 **Duration: 15 minutes**
 
 ### What You'll Learn
-- Extract structured content from PDFs with `PARSE_DOCUMENT`
+- Extract structured content from PDFs with `AI_PARSE_DOCUMENT`
 
 ### Steps
 
-1. **Run the PARSE_DOCUMENTS cell** in Part 2 of the notebook
+1. **Run the AI_PARSE_DOCUMENT cell** in Part 2 of the notebook
 
 2. **Explore the output**:
    ```sql
-   SELECT file_name, parsed_result:content::VARCHAR AS content
+   SELECT file_name, parsed_result:pages[0]:content::VARCHAR AS content
    FROM parsed_documents_raw
    LIMIT 1;
    ```

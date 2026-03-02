@@ -115,10 +115,10 @@ multimodal-customer-service-lab/
 
 | Dataset | Records | Description |
 |---------|---------|-------------|
-| Audio files | 5 | Customer service call recordings (MP3) |
-| PDF documents | 3 | Company policy documents |
-| Chat logs | 20 | Customer chat transcripts with agent classifications |
-| Support tickets | 20 | Formal tickets linked to chat sessions |
+| Audio files | 5 | Customer service call recordings (WAV) |
+| PDF documents | 70 | Company policy documents |
+| Chat logs | 100 | Customer chat transcripts with agent classifications |
+| Support tickets | 100 | Formal tickets linked to chat sessions |
 
 ## Quick Links
 
