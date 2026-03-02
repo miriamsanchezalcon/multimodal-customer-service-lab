@@ -38,8 +38,6 @@ This step-by-step guide walks you through building an AI-powered customer servic
 
 <br>
 
----
-
 <p align="center">
   <img src="assets/divider.svg" width="400">
 </p>
@@ -365,8 +363,8 @@ DROP DATABASE IF EXISTS MULTIMODAL_CUSTOMER_SERVICE;
 
 You've built a complete multimodal customer service analytics system that:
 
-| ✅ | Capability |
-|---|------------|
+| | Capability |
+|:---:|------------|
 | ✅ | Transcribes audio calls to searchable text |
 | ✅ | Translates conversations to English automatically |
 | ✅ | Detects customer sentiment |
