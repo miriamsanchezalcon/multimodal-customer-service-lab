@@ -1,0 +1,6 @@
+name: multimodal_customer_service
+channels:
+  - snowflake
+dependencies:
+  - pandas
+  - snowflake-snowpark-python

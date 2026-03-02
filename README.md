@@ -1,123 +1,102 @@
-# Snowflake Cortex AI SQL: Multimodal Customer Service Analytics
+<p align="center">
+  <img src="assets/banner.svg" alt="Multimodal Customer Service Analytics — Hands-on Snowflake Cortex AI Workshop" width="100%">
+</p>
 
-Build a production-ready customer service analytics system that processes **audio**, **text**, and **PDF** data using Snowflake Cortex AI functions — all in pure SQL.
+A 2-hour hands-on workshop where you build an end-to-end AI-powered customer service analytics system entirely within Snowflake — processing audio, text, and PDF data using pure SQL.
 
-![Snowflake](https://img.shields.io/badge/Snowflake-29B5E8?style=for-the-badge&logo=snowflake&logoColor=white)
-![SQL](https://img.shields.io/badge/SQL-4479A1?style=for-the-badge&logo=postgresql&logoColor=white)
-![AI](https://img.shields.io/badge/Cortex_AI-FF6F00?style=for-the-badge&logo=openai&logoColor=white)
+## What You Will Build
 
----
-
-## What You'll Build
-
-A complete analytics pipeline that:
-
-| Capability | Description |
-|------------|-------------|
-| **Transcribe** | Convert customer service call recordings to searchable text |
-| **Translate** | Automatically translate conversations to English |
-| **Analyze Sentiment** | Detect customer emotions (positive/negative/neutral) |
-| **Classify Issues** | Categorize calls into business-defined issue types |
-| **Summarize** | Generate concise call summaries using LLMs |
-| **Parse Documents** | Extract structured data from PDF documents |
-| **Validate Data** | Cross-check chat logs against support tickets |
-
----
-
-## AI Functions Covered
-
-| Function | Purpose | Example Use Case |
-|----------|---------|------------------|
-| `AI_TRANSCRIBE` | Speech-to-text with speaker diarization | Call center recordings |
-| `AI_TRANSLATE` | Multi-language translation | Global customer support |
-| `AI_SENTIMENT` | Emotion detection | Customer satisfaction tracking |
-| `AI_CLASSIFY` | Zero-shot categorization | Ticket routing |
-| `AI_COMPLETE` | LLM text generation | Summarization, comparison |
-| `AI_PARSE_DOCUMENT` | PDF/document extraction | Policy documents, invoices |
-| `AI_EXTRACT` | Structured field extraction | Pull specific data points |
-
----
-
-## Prerequisites
-
-- [ ] Snowflake account in a [supported Cortex region](https://docs.snowflake.com/en/user-guide/snowflake-cortex/llm-functions#label-cortex-llm-availability)
-- [ ] Role with permissions to create databases, stages, and tables
-- [ ] Warehouse (MEDIUM or larger recommended)
-- [ ] [Snowflake Notebooks](https://docs.snowflake.com/en/user-guide/ui-snowsight/notebooks) enabled
-
----
-
-## Quick Start
-
-### Step 1: Run the Setup Script (5 min)
-
-1. Open a **SQL Worksheet** in Snowsight
-2. Copy the contents of [`setup.sql`](./setup.sql)
-3. Run the entire script
-4. Verify you see: `✅ Setup complete!`
-
-This creates:
-- `MULTIMODAL_CUSTOMER_SERVICE` database
-- Audio files stage (`@CUSTOMER_CALLS`)
-- PDF documents stage (`@COMPANY_DOCUMENTS`)
-- Sample tables (`CHAT_LOGS`, `SUPPORT_TICKETS`)
-
-### Step 2: Import the Notebook (2 min)
-
-1. Download [`notebook.ipynb`](./notebook.ipynb)
-2. In Snowsight: **Projects** → **Notebooks** → **Import .ipynb file**
-3. Select:
-   - Database: `MULTIMODAL_CUSTOMER_SERVICE`
-   - Schema: `DATA`
-   - Warehouse: Your warehouse
-4. Click **Create**
-
-### Step 3: Run the Lab (30-45 min)
-
-Work through the notebook sections in order:
-
-| Part | Description | Key Functions | Time |
-|------|-------------|---------------|------|
-| **0** | Explore sample data | - | 2 min |
-| **1** | Audio processing pipeline | `AI_TRANSCRIBE`, `AI_TRANSLATE`, `AI_SENTIMENT`, `AI_CLASSIFY`, `AI_COMPLETE` | 15 min |
-| **2** | Document processing | `AI_PARSE_DOCUMENT` | 5 min |
-| **3** | Chat log validation | `AI_CLASSIFY`, `AI_SENTIMENT`, `AI_EXTRACT` | 10 min |
-| **4** | Ticket-chat alignment | `AI_COMPLETE` | 10 min |
-
----
+| What | How |
+|------|-----|
+| **Audio transcription pipeline** | Process call recordings through 6 chained AI functions |
+| **Document parser** | Extract structured content from PDF policy documents |
+| **Data validation system** | Cross-check agent classifications against AI analysis |
+| **Ticket-chat alignment** | Detect misalignments between support tickets and chat logs |
+| **Interactive dashboard** | Streamlit app with KPIs, charts, and issue browsers |
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    DATA SOURCES                                  │
-├─────────────────┬─────────────────┬─────────────────────────────┤
-│  Audio Files    │  PDF Documents  │  Chat Logs & Tickets        │
-│  (@CUSTOMER_    │  (@COMPANY_     │  (CHAT_LOGS,                │
-│   CALLS)        │   DOCUMENTS)    │   SUPPORT_TICKETS)          │
-└────────┬────────┴────────┬────────┴──────────────┬──────────────┘
-         │                 │                       │
-         ▼                 ▼                       ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                 CORTEX AI FUNCTIONS                              │
-├─────────────────┬─────────────────┬─────────────────────────────┤
-│  AI_TRANSCRIBE  │ AI_PARSE_       │  AI_CLASSIFY                │
-│  AI_TRANSLATE   │ DOCUMENT        │  AI_SENTIMENT               │
-│  AI_SENTIMENT   │                 │  AI_EXTRACT                 │
-│  AI_CLASSIFY    │                 │  AI_COMPLETE                │
-│  AI_COMPLETE    │                 │                             │
-└────────┬────────┴────────┬────────┴──────────────┬──────────────┘
-         │                 │                       │
-         ▼                 ▼                       ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    OUTPUT TABLES                                 │
-├─────────────────┬─────────────────┬─────────────────────────────┤
-│ transcription_  │ parsed_         │  chat_validation_results    │
-│ results         │ documents_raw   │  ticket_chat_alignment      │
-└─────────────────┴─────────────────┴─────────────────────────────┘
+                       SNOWFLAKE ACCOUNT
+    ┌─────────────────────────────────────────────────────┐
+    │                                                     │
+    │  ┌─────────────┐   Cortex AI    ┌──────────────┐   │
+    │  │ DATA        │ ────────────>  │ RESULTS      │   │
+    │  │ Sources     │  Transcribe    │ Tables       │   │
+    │  │             │  Translate     │              │   │
+    │  │ @CUSTOMER_  │  Sentiment     │ transcription│   │
+    │  │  CALLS      │  Classify      │ _results     │   │
+    │  │ @COMPANY_   │  Summarize     │              │   │
+    │  │  DOCUMENTS  │  Parse         │ chat_        │   │
+    │  │ CHAT_LOGS   │  Extract       │ validation_  │   │
+    │  │ SUPPORT_    │                │ results      │   │
+    │  │  TICKETS    │                │              │   │
+    │  └─────────────┘                │ ticket_chat_ │   │
+    │                                 │ alignment    │   │
+    │                                 └──────┬───────┘   │
+    │                                        │           │
+    │                          ┌─────────────▼────────┐  │
+    │                          │ STREAMLIT DASHBOARD  │  │
+    │                          │ • KPI Metrics        │  │
+    │                          │ • Sentiment Charts   │  │
+    │                          │ • Call Browser       │  │
+    │                          │ • Issue Explorer     │  │
+    │                          └──────────────────────┘  │
+    │                                                     │
+    └─────────────────────────────────────────────────────┘
 ```
 
----
+## Snowflake Features Covered
+
+| Feature | What it does | Module |
+|---------|-------------|--------|
+| **AI_TRANSCRIBE** | Convert audio recordings to text with speaker diarization | 1 |
+| **AI_TRANSLATE** | Auto-detect language and translate to English | 1 |
+| **AI_SENTIMENT** | Score text as positive/negative/neutral/mixed | 1 |
+| **AI_CLASSIFY** | Zero-shot categorization into custom business categories | 1, 3 |
+| **AI_COMPLETE** | Generate summaries and perform semantic comparisons | 1, 3 |
+| **AI_PARSE_DOCUMENT** | Extract structured content from PDFs | 2 |
+| **AI_EXTRACT** | Pull specific fields from unstructured text | 3 |
+| **Streamlit in Snowflake** | Build interactive dashboards without leaving Snowflake | 4 |
+
+## Prerequisites
+
+- A Snowflake account in a [supported Cortex region](https://docs.snowflake.com/en/user-guide/snowflake-cortex/llm-functions#label-cortex-llm-availability)
+- A web browser (everything runs inside Snowflake — no local installs needed)
+- Warehouse size MEDIUM or larger (for audio processing)
+
+## Lab Agenda
+
+| Module | Topic | Duration |
+|--------|-------|----------|
+| 0 | Environment Setup | 10 min |
+| 1 | Audio Processing Pipeline | 30 min |
+| 2 | Document Processing | 15 min |
+| 3 | Chat & Ticket Validation | 25 min |
+| 4 | Build Streamlit Dashboard | 25 min |
+| 5 | Explore & Interact | 15 min |
+| **Total** | | **2 hours** |
+
+## Getting Started
+
+1. **Open the [Lab Guide](lab_guide.md)** — this is the step-by-step walkthrough for the entire workshop
+2. Start at **Module 0** to set up your environment
+3. Follow each module in order — every step explains *what* you're doing and *why*
+
+## Repository Contents
+
+```
+multimodal-customer-service-lab/
+├── README.md                 ← You are here
+├── lab_guide.md              ← Full step-by-step lab guide (start here)
+├── assets/
+│   ├── banner.svg            ← GitHub README banner
+│   └── divider.svg           ← Section divider
+├── setup.sql                 ← Module 0: Database, stages, sample data
+├── notebook.ipynb            ← Modules 1-3: Cortex AI processing pipeline
+├── streamlit_app.py          ← Module 4: Interactive dashboard
+└── environment.yml           ← Streamlit dependencies (Conda)
+```
 
 ## Sample Data
 
@@ -128,53 +107,18 @@ Work through the notebook sections in order:
 | Chat logs | 20 | Customer chat transcripts with agent classifications |
 | Support tickets | 20 | Formal tickets linked to chat sessions |
 
----
+## Quick Links
 
-## Troubleshooting
-
-### "Function not found" errors
-Ensure your account is in a [supported Cortex region](https://docs.snowflake.com/en/user-guide/snowflake-cortex/llm-functions#label-cortex-llm-availability) and cross-region is enabled:
-```sql
-ALTER ACCOUNT SET CORTEX_ENABLED_CROSS_REGION = 'ANY_REGION';
-```
-
-### Slow transcription
-Audio transcription is compute-intensive. Expected: ~30-60 seconds per audio file. Use a MEDIUM or larger warehouse.
-
-### Stage files not found
-Refresh the stage directories:
-```sql
-ALTER STAGE CUSTOMER_CALLS REFRESH;
-ALTER STAGE COMPANY_DOCUMENTS REFRESH;
-```
-
-### Permission errors
-Ensure your role has:
-- `CREATE DATABASE` on account
-- `USAGE` on warehouse
-- `CREATE STAGE`, `CREATE TABLE` privileges
+| Resource | Link |
+|----------|------|
+| Lab Guide | [lab_guide.md](lab_guide.md) |
+| Setup Script | [setup.sql](setup.sql) |
+| Notebook | [notebook.ipynb](notebook.ipynb) |
+| Streamlit App | [streamlit_app.py](streamlit_app.py) |
+| Cortex AI Docs | [docs.snowflake.com](https://docs.snowflake.com/en/sql-reference/functions-ai) |
 
 ---
 
-## Clean Up
-
-To remove all lab resources:
-
-```sql
-DROP DATABASE IF EXISTS MULTIMODAL_CUSTOMER_SERVICE;
-```
-
----
-
-## Resources
-
-- [Cortex AI Functions Documentation](https://docs.snowflake.com/en/sql-reference/functions-ai)
-- [AI_TRANSCRIBE Reference](https://docs.snowflake.com/en/sql-reference/functions/ai_transcribe)
-- [AI_COMPLETE Reference](https://docs.snowflake.com/en/sql-reference/functions/ai_complete)
-- [Snowflake Notebooks Guide](https://docs.snowflake.com/en/user-guide/ui-snowsight/notebooks)
-
----
-
-## License
-
-This lab is provided as-is for educational purposes. Sample data is synthetic and does not represent real customer information.
+<p align="center">
+  <sub>Built with ❄️ Snowflake Cortex AI • Sample data is synthetic for demonstration purposes</sub>
+</p>
