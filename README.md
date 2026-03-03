@@ -29,11 +29,14 @@ A 2-hour hands-on workshop where you build an end-to-end AI-powered customer ser
     │  │ @CUSTOMER_  │  Sentiment    │ transcription│   │
     │  │  CALLS      │  Classify     │ _results     │   │
     │  │ @COMPANY_   │  Summarize    │              │   │
-    │  │  DOCUMENTS  │  Parse        │ chat_        │   │
-    │  │ CHAT_LOGS   │  Extract      │ validation_  │   │
-    │  │ SUPPORT_    │               │ results      │   │
-    │  │  TICKETS    │               │              │   │
-    │  └─────────────┘               │ ticket_chat_ │   │
+    │  │  DOCUMENTS  │  Parse        │ parsed_      │   │
+    │  │ CHAT_LOGS   │  Extract      │ documents_raw│   │
+    │  │ SUPPORT_    │               │              │   │
+    │  │  TICKETS    │               │ chat_        │   │
+    │  └─────────────┘               │ validation_  │   │
+    │                                │ results      │   │
+    │                                │              │   │
+    │                                │ ticket_chat_ │   │
     │                                │ alignment    │   │
     │                                └──────┬───────┘   │
     │                                       │           │
