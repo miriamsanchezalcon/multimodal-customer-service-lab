@@ -6,13 +6,26 @@
 -- Estimated runtime: 2-3 minutes
 -- ============================================================================
 
--- Create database and schema
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- STEP 1: CREATE YOUR WORKSPACE
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- A DATABASE is a top-level container (like a folder) for all your objects.
+-- A SCHEMA is a namespace inside it (like a subfolder).
+-- Everything we build today lives in MULTIMODAL_CUSTOMER_SERVICE.DATA.
 CREATE DATABASE IF NOT EXISTS MULTIMODAL_CUSTOMER_SERVICE;
 USE DATABASE MULTIMODAL_CUSTOMER_SERVICE;
 CREATE SCHEMA IF NOT EXISTS DATA;
 USE SCHEMA MULTIMODAL_CUSTOMER_SERVICE.DATA;
 
--- Create warehouse (MEDIUM recommended for audio processing)
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- STEP 2: CREATE COMPUTE
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- A WAREHOUSE is your compute engine — it runs queries and AI functions.
+-- In Snowflake, compute is separate from storage, so you can scale it
+-- up or down without touching your data.
+-- MEDIUM gives us enough power for audio transcription.
+-- AUTO_SUSPEND = 300 means it shuts off after 5 minutes of inactivity
+-- so you're not paying for idle compute.
 CREATE WAREHOUSE IF NOT EXISTS CALL_CENTER_WH
     WAREHOUSE_SIZE = 'MEDIUM'
     AUTO_SUSPEND = 300
@@ -21,62 +34,77 @@ CREATE WAREHOUSE IF NOT EXISTS CALL_CENTER_WH
 
 USE WAREHOUSE CALL_CENTER_WH;
 
--- Enable cross-region Cortex AI (required for some regions)
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- STEP 3: ENABLE CORTEX AI
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- This enables Snowflake's built-in AI functions (transcription, translation,
+-- sentiment analysis, etc.) regardless of which cloud region your account is in.
+-- No API keys, no external services — everything runs inside Snowflake.
 ALTER ACCOUNT SET CORTEX_ENABLED_CROSS_REGION = 'ANY_REGION';
 
--- ============================================================================
--- AUDIO FILES SETUP
--- ============================================================================
--- Create external stage pointing to sample audio files
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- STEP 4: LOAD AUDIO FILES
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- A STAGE is a file storage area — think of it as a loading dock.
+-- An EXTERNAL stage points to files in cloud storage (S3 in this case).
+-- An INTERNAL stage holds files copied into Snowflake for processing.
+-- We copy from external → internal so Cortex AI can access the files directly.
+
+-- External stage: points to sample audio files in S3
 CREATE OR REPLACE STAGE MULTIMODAL_CUSTOMER_SERVICE.DATA.CUSTOMER_CALLS_EXTERNAL
   URL = 's3://sfquickstarts/extracting-insights-from-multimodal-customer-data/AUDIO_DATA/'
   DIRECTORY = (ENABLE = TRUE);
 
--- Create internal stage for audio files
+-- Internal stage: where we'll store the files inside Snowflake
 CREATE OR REPLACE STAGE MULTIMODAL_CUSTOMER_SERVICE.DATA.CUSTOMER_CALLS
     ENCRYPTION = (TYPE = 'SNOWFLAKE_SSE')
     DIRECTORY = (ENABLE = TRUE);
 
--- Copy audio files to internal stage
+-- Copy all 101 audio files from S3 into our internal stage
 COPY FILES
   INTO @CUSTOMER_CALLS
   FROM @CUSTOMER_CALLS_EXTERNAL;
 
--- Refresh stage directory
+-- Refresh the directory so Snowflake knows what files are available
 ALTER STAGE MULTIMODAL_CUSTOMER_SERVICE.DATA.CUSTOMER_CALLS REFRESH;
 
--- Create table listing audio files (limit to 5 for lab timing — stage has 101 files)
+-- Create a table listing just 5 audio files (out of 101) to keep lab timing manageable
 CREATE OR REPLACE TABLE DATA.audio_file_list AS 
 SELECT 
     RELATIVE_PATH AS file_name
 FROM DIRECTORY(@MULTIMODAL_CUSTOMER_SERVICE.DATA.Customer_Calls)
 LIMIT 5;
 
--- ============================================================================
--- PDF DOCUMENTS SETUP
--- ============================================================================
--- Create external stage pointing to sample PDF documents
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- STEP 5: LOAD PDF DOCUMENTS
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- Same pattern: external stage → internal stage → ready for AI processing
+
+-- External stage: points to sample PDF documents in S3
 CREATE OR REPLACE STAGE MULTIMODAL_CUSTOMER_SERVICE.DATA.COMPANY_DOCUMENTS_EXTERNAL
   URL = 's3://sfquickstarts/extracting-insights-from-multimodal-customer-data/DOCUMENT_DATA/'
   DIRECTORY = (ENABLE = TRUE);
 
--- Create internal stage for documents
+-- Internal stage for documents
 CREATE OR REPLACE STAGE MULTIMODAL_CUSTOMER_SERVICE.DATA.COMPANY_DOCUMENTS
     ENCRYPTION = (TYPE = 'SNOWFLAKE_SSE')
     DIRECTORY = (ENABLE = TRUE);
 
--- Copy documents to internal stage
+-- Copy ~70 PDF documents from S3
 COPY FILES
   INTO @COMPANY_DOCUMENTS
   FROM @COMPANY_DOCUMENTS_EXTERNAL;
 
--- Refresh stage directory
+-- Refresh directory listing
 ALTER STAGE COMPANY_DOCUMENTS REFRESH;
 
--- ============================================================================
--- RESULTS TABLE
--- ============================================================================
--- Create table to store transcription and analysis results
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- STEP 6: CREATE RESULTS TABLE
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- This empty table will hold the output of our AI processing pipeline.
+-- The VARIANT columns (segments, raw_response) store JSON data — Snowflake
+-- handles semi-structured data natively, no parsing needed.
+-- The notebook will populate this table in Module 1.
 CREATE TABLE IF NOT EXISTS transcription_results (
     transcription_id VARCHAR(100) PRIMARY KEY DEFAULT ('trans_' || UUID_STRING()),
     stage_location VARCHAR(500) NOT NULL,
@@ -93,15 +121,20 @@ CREATE TABLE IF NOT EXISTS transcription_results (
     transcription_completed_at TIMESTAMP_NTZ
 );
 
--- ============================================================================
--- CHAT LOGS & SUPPORT TICKETS SETUP
--- ============================================================================
--- Create stage for CSV data
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- STEP 7: LOAD STRUCTURED DATA (CHAT LOGS & SUPPORT TICKETS)
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- Now we load traditional tabular data from CSV files.
+-- INFER_SCHEMA automatically detects column names and types from the CSV header.
+-- USING TEMPLATE creates the table with those inferred columns — no need to
+-- manually define the schema. COPY INTO then loads the actual data.
+
+-- Stage pointing to CSV files in S3
 CREATE OR REPLACE STAGE MULTIMODAL_CUSTOMER_SERVICE.DATA.TABLE_DATA
   URL = 's3://sfquickstarts/extracting-insights-from-multimodal-customer-data/TABLE_DATA/'
   DIRECTORY = (ENABLE = TRUE);
 
--- Create file format for CSV parsing
+-- File format tells Snowflake how to parse the CSV
 CREATE OR REPLACE FILE FORMAT csv_format
   TYPE = 'CSV'
   PARSE_HEADER = TRUE
@@ -109,7 +142,7 @@ CREATE OR REPLACE FILE FORMAT csv_format
   TRIM_SPACE = TRUE
   EMPTY_FIELD_AS_NULL = TRUE;
 
--- Create and load CHAT_LOGS table
+-- Chat logs: 100 customer chat transcripts with agent-assigned categories
 CREATE OR REPLACE TABLE CHAT_LOGS
 USING TEMPLATE (
   SELECT ARRAY_AGG(OBJECT_CONSTRUCT(*))
@@ -126,7 +159,7 @@ FROM @TABLE_DATA/chat_logs.csv
 FILE_FORMAT = (FORMAT_NAME = 'csv_format')
 MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE;
 
--- Create and load SUPPORT_TICKETS table
+-- Support tickets: 100 formal tickets linked to the chats above
 CREATE OR REPLACE TABLE SUPPORT_TICKETS
 USING TEMPLATE (
   SELECT ARRAY_AGG(OBJECT_CONSTRUCT(*))
@@ -143,10 +176,11 @@ FROM @TABLE_DATA/support_tickets.csv
 FILE_FORMAT = (FORMAT_NAME = 'csv_format')
 MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE;
 
--- ============================================================================
--- VERIFICATION
--- ============================================================================
--- Run these queries to verify setup completed successfully
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- STEP 8: VERIFY EVERYTHING WORKED
+-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-- You should see: audio_file_count = 5, chat_log_count = 100, ticket_count = 100
+-- If any count is 0, re-run the corresponding section above.
 
 -- Check audio files loaded
 SELECT COUNT(*) AS audio_file_count FROM DATA.audio_file_list;
